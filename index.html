@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Maths Champion — World Explorer Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body{font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#1e3c5a,#2d5986,#1e4d7a);min-height:100vh;color:#fff;overflow-x:hidden}
+#root{min-height:100vh}
+.card{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:16px;backdrop-filter:blur(8px)}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:12px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;min-height:48px;padding:12px 24px;transition:transform 0.1s,opacity 0.1s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;text-decoration:none}
+.btn:active{transform:scale(0.96)}
+.btn-primary{background:#FECA57;color:#1e3c5a}
+.btn-secondary{background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3)}
+.btn-success{background:#1DD1A1;color:#fff}
+.btn-danger{background:#FF6B6B;color:#fff}
+.screen{min-height:100vh;padding:16px;max-width:480px;margin:0 auto}
+input[type=text]{font-family:'Nunito',sans-serif;font-size:18px;padding:12px 16px;border-radius:12px;border:2px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;width:100%;outline:none}
+input[type=text]::placeholder{color:rgba(255,255,255,0.5)}
+input[type=text]:focus{border-color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.2)}
+input[type=number]{font-family:'Nunito',sans-serif;font-size:24px;font-weight:800;padding:12px 16px;border-radius:12px;border:2px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;width:100%;outline:none;text-align:center}
+input[type=number]:focus{border-color:#FECA57;background:rgba(255,255,255,0.2)}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+.progress-bar-bg{background:rgba(255,255,255,0.2);border-radius:8px;height:12px;overflow:hidden}
+.progress-bar-fill{height:100%;border-radius:8px;transition:width 0.5s ease}
+h1{font-family:'Fredoka One',sans-serif}
+h2{font-family:'Fredoka One',sans-serif}
+.star{color:#FECA57}
+@keyframes pop{0%{transform:scale(0)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.animate-pop{animation:pop 0.3s ease forwards}
+.animate-fade{animation:fadeIn 0.3s ease forwards}
+.animate-pulse{animation:pulse 1.5s ease infinite}
+.animate-shake{animation:shake 0.3s ease}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const TABLE_ORDER=[1,2,10,5,3,4,6,9,11,7,8,12];
+const TABLE_COLORS=["#FF6B6B","#FF9F43","#FECA57","#1DD1A1","#48DBFB","#FF9FF3","#A29BFE","#FD79A8","#6C5CE7","#00B894","#74B9FF","#E17055"];
+const LANDMARKS={1:"🗺️ World Map",2:"🗼 Eiffel Tower",10:"🕐 Big Ben",5:"🏛️ Colosseum",3:"🐉 Great Wall",4:"🗽 Statue of Liberty",6:"🕌 Taj Mahal",9:"🦁 Serengeti",11:"🗻 Mount Fuji",7:"🌉 Golden Gate",8:"🏔️ Machu Picchu",12:"🌌 Northern Lights"};
+const LANDMARK_DESCS={1:"Every journey begins with a map. You've started your world adventure!",2:"La Tour Eiffel! The iron lady of Paris stands 330 metres tall.",10:"The famous Westminster clock tower has struck every hour since 1859.",5:"Built 2,000 years ago, 80,000 spectators once watched gladiators here!",3:"Over 21,000 km long — the longest wall ever built by humans.",4:"A gift from France to America, she holds her torch high since 1886.",6:"The ivory jewel took 22,000 workers and 22 years to complete.",9:"Home to the Great Migration — 2 million wildebeest on the move!",11:"Mount Fuji is Japan's highest peak and a sacred symbol for centuries.",7:"1.7 miles of iconic orange suspension bridge over San Francisco Bay.",8:"Lost city of the Incas, hidden in the clouds at 2,430 metres.",12:"Solar particles dancing — the greatest light show on Earth!"};
+const AVATARS=["🦁","🐯","🦊","🐼","🐨","🦄","🐸","🐙","🦋","🐬","🦅","🐲","🦓","🦒","🐘","🦜"];
+const RANKS=[{name:"Beginner",min:0,icon:"⭐"},{name:"Bronze",min:3,icon:"🥉"},{name:"Silver",min:6,icon:"🥈"},{name:"Gold",min:9,icon:"🥇"},{name:"Champion",min:12,icon:"🏆"},{name:"Legend",min:12,speedMin:20,icon:"🌟"}];
+const TIPS={1:"✨ Any number × 1 stays the same! 7×1=7, 9×1=9. Easy!",2:"✌️ Times 2 means double it! 6×2=12, it's like adding twice.",10:"🔟 Times 10? Just add a zero! 7×10=70. Magic!",5:"🖐️ Times 5 ends in 0 or 5. Count in fives on your fingers!",3:"🎵 Count in 3s: 3,6,9,12,15,18... it's a rhythm!",4:"🔄 Times 4 = double, then double again! 6×4 → 12 → 24.",6:"🎲 6×6=36. 6×7=42. 6×8=48. Spot the pattern?",9:"🤙 The 9-finger trick! Hold up hands, fold the nth finger down.",11:"1️⃣1️⃣ 11×1-9: just repeat the digit! 11×3=33, 11×7=77.",7:"🎯 7s are the trickiest! 7×8=56 — remember: 5,6,7,8.",8:"⚡ 8s go fast! Double, double, double. 3×8 → 6 → 12 → 24.",12:"🌟 You know 1-11, so 12 is just n×11 + n. You've got this!"};
+const PROFILES_KEY="maths_champion_profiles_v1";
+const ANALYTICS_KEY="maths_champion_analytics_v1";
+
+// ─── Storage helpers ─────────────────────────────────────────────────────────
+function loadProfiles(){try{return JSON.parse(localStorage.getItem(PROFILES_KEY)||"[]")}catch{return []}}
+function saveProfiles(p){localStorage.setItem(PROFILES_KEY,JSON.stringify(p))}
+function loadAnalytics(){try{return JSON.parse(localStorage.getItem(ANALYTICS_KEY)||"null")||{totalSessions:0,tableCompletions:{},speedScores:{}}}catch{return {totalSessions:0,tableCompletions:{},speedScores:{}}}}
+function saveAnalytics(a){localStorage.setItem(ANALYTICS_KEY,JSON.stringify(a))}
+
+function getRank(profile){
+  const completed=TABLE_ORDER.filter(t=>profile.completed&&profile.completed[t]).length;
+  const maxSpeed=profile.speedBests?Math.max(0,...Object.values(profile.speedBests)):0;
+  if(completed===12&&maxSpeed>=20)return RANKS[5];
+  for(let i=RANKS.length-1;i>=0;i--){
+    if(RANKS[i].speedMin&&!(completed===12&&maxSpeed>=RANKS[i].speedMin))continue;
+    if(completed>=RANKS[i].min)return RANKS[i];
+  }
+  return RANKS[0];
+}
+
+function makeProfile(name,avatar){
+  return {id:Date.now().toString(),name,avatar,completed:{},speedBests:{},weakFacts:{},lastActive:Date.now(),created:Date.now()};
+}
+
+function getTableColorIdx(table){return TABLE_ORDER.indexOf(table)}
+function getTableColor(table){return TABLE_COLORS[getTableColorIdx(table)]||"#A29BFE"}
+
+function genQuestions(table,count=12){
+  const qs=[];
+  const factors=Array.from({length:12},(_,i)=>i+1);
+  const shuffled=[...factors].sort(()=>Math.random()-0.5);
+  for(let i=0;i<count;i++){
+    const f=shuffled[i%12];
+    qs.push({factor:f,answer:table*f,id:i});
+  }
+  return qs;
+}
+
+// ─── Components ──────────────────────────────────────────────────────────────
+
+function ProfileSelect({onSelect,onNew,onAdmin}){
+  const profiles=loadProfiles();
+  return(
+    <div className="screen" style={{display:"flex",flexDirection:"column",alignItems:"center",paddingTop:40}}>
+      <div style={{fontSize:48,marginBottom:8}}>🌍</div>
+      <h1 style={{fontSize:32,textAlign:"center",marginBottom:4}}>Maths Champion</h1>
+      <p style={{color:"rgba(255,255,255,0.7)",marginBottom:32,textAlign:"center"}}>World Explorer Edition</p>
+      {profiles.length===0?(
+        <div className="card" style={{padding:24,textAlign:"center",width:"100%",maxWidth:360,marginBottom:24}}>
+          <p style={{fontSize:18,marginBottom:16}}>No explorers yet!</p>
+          <p style={{color:"rgba(255,255,255,0.7)"}}>Create your profile to start your adventure.</p>
+        </div>
+      ):(
+        <div style={{width:"100%",maxWidth:360,marginBottom:16}}>
+          <p style={{textAlign:"center",marginBottom:12,color:"rgba(255,255,255,0.8)",fontWeight:700}}>Choose Explorer</p>
+          {profiles.map(p=>{
+            const rank=getRank(p);
+            const completed=TABLE_ORDER.filter(t=>p.completed&&p.completed[t]).length;
+            return(
+              <button key={p.id} onClick={()=>onSelect(p)} className="card btn" style={{width:"100%",marginBottom:10,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,textAlign:"left",cursor:"pointer",border:"1px solid rgba(255,255,255,0.2)"}}>
+                <span style={{fontSize:36}}>{p.avatar}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:800,fontSize:18}}>{p.name}</div>
+                  <div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>{rank.icon} {rank.name} · {completed}/12 tables</div>
+                </div>
+                <span style={{fontSize:20}}>›</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <button className="btn btn-primary" style={{width:"100%",maxWidth:360,marginBottom:12}} onClick={onNew}>
+        ✨ New Explorer
+      </button>
+      <button className="btn btn-secondary" style={{width:"100%",maxWidth:360,fontSize:14}} onClick={onAdmin}>
+        📊 Admin Dashboard
+      </button>
+    </div>
+  );
+}
+
+function NewProfile({onSave,onBack}){
+  const [name,setName]=useState("");
+  const [avatar,setAvatar]=useState("🦁");
+  function save(){
+    if(!name.trim())return;
+    const profiles=loadProfiles();
+    const p=makeProfile(name.trim(),avatar);
+    profiles.push(p);
+    saveProfiles(profiles);
+    const a=loadAnalytics();
+    saveAnalytics(a);
+    onSave(p);
+  }
+  return(
+    <div className="screen" style={{paddingTop:32}}>
+      <button onClick={onBack} className="btn btn-secondary" style={{padding:"8px 16px",fontSize:14,marginBottom:24}}>← Back</button>
+      <h2 style={{fontSize:28,marginBottom:8,textAlign:"center"}}>Create Explorer</h2>
+      <p style={{textAlign:"center",color:"rgba(255,255,255,0.7)",marginBottom:32}}>Choose your name and avatar</p>
+      <div className="card" style={{padding:24,marginBottom:16}}>
+        <label style={{display:"block",fontWeight:700,marginBottom:8}}>Your Name</label>
+        <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="Enter your name..." maxLength={20}/>
+      </div>
+      <div className="card" style={{padding:24,marginBottom:24}}>
+        <label style={{display:"block",fontWeight:700,marginBottom:12}}>Pick Your Avatar</label>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+          {AVATARS.map(a=>(
+            <button key={a} onClick={()=>setAvatar(a)} style={{fontSize:32,padding:10,borderRadius:12,border:avatar===a?"3px solid #FECA57":"2px solid rgba(255,255,255,0.2)",background:avatar===a?"rgba(254,202,87,0.2)":"rgba(255,255,255,0.1)",cursor:"pointer",transition:"all 0.15s"}}>
+              {a}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{textAlign:"center",fontSize:40,marginBottom:16}}>{avatar}</div>
+      <button className="btn btn-primary" style={{width:"100%",fontSize:18}} disabled={!name.trim()} onClick={save}>
+        🚀 Start Exploring!
+      </button>
+    </div>
+  );
+}
+
+function HomeScreen({profile,onTable,onProgress,onHallOfFame,onSwitchProfile,onUpdateProfile}){
+  const completed=TABLE_ORDER.filter(t=>profile.completed&&profile.completed[t]).length;
+  const rank=getRank(profile);
+  const pct=Math.round((completed/12)*100);
+  return(
+    <div className="screen" style={{paddingTop:16,paddingBottom:32}}>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+        <button onClick={onSwitchProfile} className="btn btn-secondary" style={{padding:"8px 14px",fontSize:13}}>Switch</button>
+        <div style={{textAlign:"center"}}>
+          <span style={{fontSize:28}}>{profile.avatar}</span>
+          <div style={{fontWeight:800,fontSize:16}}>{profile.name}</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.8)"}}>{rank.icon} {rank.name}</div>
+        </div>
+        <button onClick={onProgress} className="btn btn-secondary" style={{padding:"8px 14px",fontSize:13}}>Stats</button>
+      </div>
+
+      {/* Title */}
+      <h1 style={{textAlign:"center",fontSize:26,marginBottom:4}}>🌍 World Explorer</h1>
+      
+      {/* Progress */}
+      <div className="card" style={{padding:16,marginBottom:20}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+          <span style={{fontWeight:700}}>Adventure Progress</span>
+          <span style={{fontWeight:800,color:"#FECA57"}}>{completed}/12 tables</span>
+        </div>
+        <div className="progress-bar-bg">
+          <div className="progress-bar-fill" style={{width:`${pct}%`,background:"linear-gradient(90deg,#FECA57,#FF9F43)"}}/>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:13,color:"rgba(255,255,255,0.7)"}}>
+          <span>🌍 {completed} landmarks unlocked</span>
+          <span>{pct}% complete</span>
+        </div>
+      </div>
+
+      {/* Map preview - landmarks grid */}
+      <div style={{marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <h2 style={{fontSize:18}}>🗺️ Your Landmarks</h2>
+          <button onClick={onHallOfFame} className="btn btn-secondary" style={{padding:"6px 12px",fontSize:12}}>⚡ Hall of Fame</button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+          {TABLE_ORDER.map(t=>{
+            const unlocked=profile.completed&&profile.completed[t];
+            const [icon,name]=LANDMARKS[t].split(" ");
+            return(
+              <div key={t} className="card" style={{padding:"10px 6px",textAlign:"center",opacity:unlocked?1:0.35,border:unlocked?`2px solid ${getTableColor(t)}`:undefined}}>
+                <div style={{fontSize:22}}>{icon}</div>
+                <div style={{fontSize:10,marginTop:2,color:"rgba(255,255,255,0.8)"}}>{name}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Times tables grid */}
+      <h2 style={{fontSize:18,marginBottom:10}}>📚 Times Tables</h2>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
+        {TABLE_ORDER.map((t,i)=>{
+          const isUnlocked=i===0||(profile.completed&&profile.completed[TABLE_ORDER[i-1]]);
+          const isDone=profile.completed&&profile.completed[t];
+          const color=getTableColor(t);
+          const hasSpeed=profile.speedBests&&profile.speedBests[t];
+          return(
+            <button key={t} onClick={()=>isUnlocked&&onTable(t)} disabled={!isUnlocked} style={{
+              background:isDone?color:isUnlocked?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.05)",
+              border:`2px solid ${isDone?color:isUnlocked?"rgba(255,255,255,0.3)":"rgba(255,255,255,0.1)"}`,
+              borderRadius:14,padding:"14px 8px",cursor:isUnlocked?"pointer":"default",
+              opacity:isUnlocked?1:0.4,color:isDone?"#1e3c5a":"#fff",transition:"all 0.2s"
+            }}>
+              <div style={{fontSize:22,fontFamily:"'Fredoka One',sans-serif",fontWeight:900}}>{t}×</div>
+              {isDone&&<div style={{fontSize:11,fontWeight:700,marginTop:2}}>✓ Done{hasSpeed?` ⚡${profile.speedBests[t]}`:""}</div>}
+              {!isDone&&isUnlocked&&<div style={{fontSize:11,opacity:0.8,marginTop:2}}>Tap to learn</div>}
+              {!isUnlocked&&<div style={{fontSize:16,marginTop:2}}>🔒</div>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Table Screen (Learn / Practise / Test / Speed) ──────────────────────────
+function TableScreen({table,profile,onComplete,onBack,onUpdateProfile}){
+  const [phase,setPhase]=useState("learn");
+  const color=getTableColor(table);
+  
+  function advancePhase(next){setPhase(next);}
+  
+  if(phase==="learn")return<LearnPhase table={table} color={color} onNext={()=>advancePhase("practise")} onBack={onBack}/>;
+  if(phase==="practise")return<PractisePhase table={table} color={color} onNext={()=>advancePhase("test")} onBack={()=>setPhase("learn")}/>;
+  if(phase==="test")return<TestPhase table={table} color={color} onPass={()=>advancePhase("speed")} onBack={()=>setPhase("practise")} profile={profile} onUpdateProfile={onUpdateProfile}/>;
+  if(phase==="speed")return<SpeedPhase table={table} color={color} onDone={(score)=>{onComplete(table,score);}} onBack={()=>setPhase("test")} profile={profile}/>;
+  return null;
+}
+
+function LearnPhase({table,color,onNext,onBack}){
+  const [revealed,setRevealed]=useState(false);
+  const facts=Array.from({length:12},(_,i)=>({f:i+1,a:table*(i+1)}));
+  return(
+    <div className="screen" style={{paddingTop:16,paddingBottom:32}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={onBack} className="btn btn-secondary" style={{padding:"8px 14px",fontSize:13}}>← Back</button>
+        <h2 style={{fontSize:22}}>📖 Learn {table}× table</h2>
+      </div>
+      <div className="card" style={{padding:20,marginBottom:16,borderLeft:`4px solid ${color}`}}>
+        <p style={{fontWeight:700,fontSize:15,marginBottom:8}}>💡 Tip</p>
+        <p style={{color:"rgba(255,255,255,0.9)",lineHeight:1.5}}>{TIPS[table]}</p>
+      </div>
+      <div className="card" style={{padding:16,marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <h3 style={{fontSize:16}}>Pattern Card</h3>
+          <button onClick={()=>setRevealed(!revealed)} className="btn btn-secondary" style={{padding:"6px 14px",fontSize:13}}>
+            {revealed?"Hide answers":"Reveal all"}
+          </button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {facts.map(({f,a})=>(
+            <div key={f} onClick={()=>setRevealed(true)} style={{background:"rgba(255,255,255,0.1)",borderRadius:10,padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+              <span style={{fontWeight:700}}>{table} × {f} =</span>
+              <span style={{fontWeight:900,fontSize:18,color:revealed?color:"rgba(255,255,255,0.2)",transition:"color 0.3s"}}>{a}</span>
+            </div>
+          ))}
+        </div>
+        {!revealed&&<p style={{textAlign:"center",fontSize:13,color:"rgba(255,255,255,0.6)",marginTop:10}}>Tap any fact to reveal answers</p>}
+      </div>
+      <button className="btn btn-primary" style={{width:"100%",fontSize:18}} onClick={onNext}>
+        Practise → 
+      </button>
+    </div>
+  );
+}
+
+function PractisePhase({table,color,onNext,onBack}){
+  const facts=Array.from({length:12},(_,i)=>({f:i+1,ans:table*(i+1),val:"",checked:false,correct:null}));
+  const [answers,setAnswers]=useState(facts);
+  const [checked,setChecked]=useState(false);
+  const [allCorrect,setAllCorrect]=useState(false);
+  
+  function updateAns(i,v){
+    setAnswers(a=>a.map((x,j)=>j===i?{...x,val:v}:x));
+  }
+  function checkAnswers(){
+    const updated=answers.map(a=>({...a,checked:true,correct:parseInt(a.val)===a.ans}));
+    setAnswers(updated);
+    setChecked(true);
+    setAllCorrect(updated.every(a=>a.correct));
+  }
+  function retry(){
+    const wrong=answers.map(a=>({...a,val:a.correct?"":a.val,checked:false,correct:null}));
+    setAnswers(wrong);setChecked(false);setAllCorrect(false);
+  }
+  
+  return(
+    <div className="screen" style={{paddingTop:16,paddingBottom:32}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={onBack} className="btn btn-secondary" style={{padding:"8px 14px",fontSize:13}}>← Back</button>
+        <h2 style={{fontSize:22}}>✏️ Practise {table}×</h2>
+      </div>
+      <div className="card" style={{padding:12,marginBottom:12,display:"flex",flexWrap:"wrap",gap:6,justifyContent:"center"}}>
+        {Array.from({length:12},(_,i)=>i+1).map(f=>(
+          <span key={f} style={{background:color,color:"#1e3c5a",borderRadius:8,padding:"4px 8px",fontWeight:700,fontSize:13}}>{table}×{f}={table*f}</span>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+        {answers.map((a,i)=>(
+          <div key={i} style={{background:!a.checked?"rgba(255,255,255,0.1)":a.correct?"rgba(29,209,161,0.2)":"rgba(255,107,107,0.2)",borderRadius:12,padding:"10px 12px",border:`2px solid ${!a.checked?"rgba(255,255,255,0.2)":a.correct?"#1DD1A1":"#FF6B6B"}`}}>
+            <div style={{fontWeight:700,marginBottom:6,fontSize:14}}>{table} × {a.f} =</div>
+            {a.checked&&a.correct?(
+              <div style={{fontSize:22,fontWeight:900,color:"#1DD1A1"}}>✓ {a.ans}</div>
+            ):(
+              <input type="number" value={a.val} onChange={e=>updateAns(i,e.target.value)} style={{background:"transparent",border:"none",color:a.checked&&!a.correct?"#FF6B6B":"#fff",fontSize:20,fontWeight:900,padding:0,textAlign:"center",width:"100%"}} placeholder="?"/>
+            )}
+          </div>
+        ))}
+      </div>
+      {!checked&&<button className="btn btn-primary" style={{width:"100%",fontSize:18}} onClick={checkAnswers}>Check Answers ✓</button>}
+      {checked&&!allCorrect&&<button className="btn btn-danger" style={{width:"100%",fontSize:18,marginBottom:10}} onClick={retry}>Try Again 🔄</button>}
+      {checked&&allCorrect&&(
+        <button className="btn btn-success" style={{width:"100%",fontSize:18}} onClick={onNext}>
+          🎉 All Correct! Take the Test →
+        </button>
+      )}
+    </div>
+  );
+}
+
+function TestPhase({table,color,onPass,onBack,profile,onUpdateProfile}){
+  const [questions]=useState(()=>genQuestions(table,12));
+  const [current,setCurrent]=useState(0);
+  const [userAns,setUserAns]=useState("");
+  const [results,setResults]=useState([]);
+  const [feedback,setFeedback]=useState(null);
+  const [done,setDone]=useState(false);
+  const inputRef=useRef();
+  
+  useEffect(()=>{if(inputRef.current)inputRef.current.focus();},[current]);
+  
+  function submit(){
+    const q=questions[current];
+    const correct=parseInt(userAns)===q.answer;
+    setFeedback(correct?"correct":"wrong");
+    // track weak facts
+    if(!correct){
+      const key=`${table}x${q.factor}`;
+      const updated={...profile};
+      updated.weakFacts=updated.weakFacts||{};
+      updated.weakFacts[key]=(updated.weakFacts[key]||0)+1;
+      onUpdateProfile(updated);
+    }
+    setTimeout(()=>{
+      const newResults=[...results,{...q,userAns:parseInt(userAns),correct}];
+      setResults(newResults);
+      setFeedback(null);
+      setUserAns("");
+      if(current+1>=questions.length){setDone(true);}
+      else{setCurrent(c=>c+1);}
+    },700);
+  }
+  
+  function handleKey(e){if(e.key==="Enter"&&userAns)submit();}
+  
+  if(done){
+    const score=results.filter(r=>r.correct).length;
+    const pct=Math.round((score/questions.length)*100);
+    const passed=pct>=80;
+    return(
+      <div className="screen" style={{paddingTop:32,textAlign:"center"}}>
+        <div style={{fontSize:64,marginBottom:16}}>{passed?"🎉":"😅"}</div>
+        <h2 style={{fontSize:28,marginBottom:8}}>{passed?"Test Passed!":"Keep Trying!"}</h2>
+        <div style={{fontSize:48,fontWeight:900,color:passed?"#1DD1A1":"#FF6B6B",marginBottom:8}}>{pct}%</div>
+        <p style={{color:"rgba(255,255,255,0.8)",marginBottom:24}}>{score}/{questions.length} correct · Need 80% to pass</p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:24}}>
+          {results.map((r,i)=>(
+            <div key={i} style={{background:r.correct?"rgba(29,209,161,0.2)":"rgba(255,107,107,0.2)",borderRadius:10,padding:"8px 12px",border:`2px solid ${r.correct?"#1DD1A1":"#FF6B6B"}`}}>
+              <div style={{fontSize:12,fontWeight:700}}>{table}×{r.factor}={r.answer}</div>
+              <div style={{fontSize:12,color:r.correct?"#1DD1A1":"#FF6B6B"}}>{r.correct?"✓":r.userAns?`✗ (${r.userAns})`:""}</div>
+            </div>
+          ))}
+        </div>
+        {passed?(
+          <button className="btn btn-success" style={{width:"100%",fontSize:18}} onClick={onPass}>⚡ Speed Round →</button>
+        ):(
+          <div>
+            <button className="btn btn-primary" style={{width:"100%",fontSize:18,marginBottom:10}} onClick={()=>{setCurrent(0);setResults([]);setDone(false);}}>Try Again 🔄</button>
+            <button onClick={onBack} className="btn btn-secondary" style={{width:"100%"}}>← Back to Practise</button>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  const q=questions[current];
+  const progress=((current)/questions.length)*100;
+  return(
+    <div className="screen" style={{paddingTop:16}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+        <button onClick={onBack} className="btn btn-secondary" style={{padding:"8px 14px",fontSize:13}}>← Back</button>
+        <div style={{flex:1}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+            <span>Question {current+1}/{questions.length}</span>
+            <span>Need 80%</span>
+          </div>
+          <div className="progress-bar-bg"><div className="progress-bar-fill" style={{width:`${progress}%`,background:color}}/></div>
+        </div>
+      </div>
+      <div className={`card animate-${feedback?"fade":""}`} style={{padding:32,textAlign:"center",marginBottom:20,border:`3px solid ${feedback==="correct"?"#1DD1A1":feedback==="wrong"?"#FF6B6B":color}`}}>
+        <div style={{fontSize:42,fontWeight:900,marginBottom:8}}>{table} × {q.factor} = ?</div>
+        {feedback&&<div style={{fontSize:48,fontWeight:900,color:feedback==="correct"?"#1DD1A1":"#FF6B6B",marginTop:8}}>{feedback==="correct"?"✓ "+q.answer:"✗ "+q.answer}</div>}
+      </div>
+      <input ref={inputRef} type="number" value={userAns} onChange={e=>setUserAns(e.target.value)} onKeyDown={handleKey} placeholder="Type your answer..." style={{marginBottom:16}}/>
+      <button className="btn btn-primary" style={{width:"100%",fontSize:20,height:56}} disabled={!userAns} onClick={submit}>Submit ✓</button>
+    </div>
+  );
+}
+
+function SpeedPhase({table,color,onDone,onBack,profile}){
+  const [started,setStarted]=useState(false);
+  const [timeLeft,setTimeLeft]=useState(60);
+  const [score,setScore]=useState(0);
+  const [q,setQ]=useState(null);
+  const [userAns,setUserAns]=useState("");
+  const [feedback,setFeedback]=useState(null);
+  const [finished,setFinished]=useState(false);
+  const inputRef=useRef();
+  const timerRef=useRef();
+  const prevBest=profile.speedBests&&profile.speedBests[table]||0;
+  
+  function newQ(){
+    const f=Math.floor(Math.random()*12)+1;
+    setQ({factor:f,answer:table*f});
+  }
+  
+  function start(){
+    setStarted(true);newQ();
+    timerRef.current=setInterval(()=>{
+      setTimeLeft(t=>{
+        if(t<=1){clearInterval(timerRef.current);setFinished(true);return 0;}
+        return t-1;
+      });
+    },1000);
+  }
+  
+  useEffect(()=>{if(started&&inputRef.current)inputRef.current.focus();},[started,q]);
+  useEffect(()=>()=>clearInterval(timerRef.current),[]);
+  
+  function submit(){
+    if(!q)return;
+    const correct=parseInt(userAns)===q.answer;
+    setFeedback(correct?"correct":"wrong");
+    if(correct){setScore(s=>s+1);}
+    setUserAns("");
+    setTimeout(()=>{setFeedback(null);newQ();},300);
+  }
+  
+  function handleKey(e){if(e.key==="Enter"&&userAns)submit();}
+  
+  if(finished){
+    const isNewBest=score>prevBest;
+    return(
+      <div className="screen" style={{paddingTop:40,textAlign:"center"}}>
+        <div style={{fontSize:64,marginBottom:12}}>⚡</div>
+        <h2 style={{fontSize:28,marginBottom:8}}>Speed Round Complete!</h2>
+        <div style={{fontSize:72,fontWeight:900,color:"#FECA57",marginBottom:8}}>{score}</div>
+        <p style={{fontSize:18,marginBottom:8}}>questions in 60 seconds!</p>
+        {isNewBest&&<div className="card animate-pop" style={{padding:16,marginBottom:16,background:"rgba(254,202,87,0.2)",border:"2px solid #FECA57"}}>
+          <p style={{color:"#FECA57",fontWeight:800,fontSize:18}}>🏆 New Personal Best!</p>
+        </div>}
+        {!isNewBest&&<p style={{color:"rgba(255,255,255,0.7)",marginBottom:16}}>Personal best: {prevBest}</p>}
+        <button className="btn btn-primary" style={{width:"100%",fontSize:18}} onClick={()=>onDone(score)}>
+          🌟 Claim Landmark →
+        </button>
+      </div>
+    );
+  }
+  
+  if(!started){
+    return(
+      <div className="screen" style={{paddingTop:40,textAlign:"center"}}>
+        <div style={{fontSize:64,marginBottom:12}}>⚡</div>
+        <h2 style={{fontSize:28,marginBottom:8}}>Speed Round!</h2>
+        <p style={{color:"rgba(255,255,255,0.8)",marginBottom:8,fontSize:18}}>60 seconds · Score as many as you can</p>
+        {prevBest>0&&<p style={{color:"#FECA57",fontWeight:700,marginBottom:24}}>🏆 Your best: {prevBest}</p>}
+        <div className="card" style={{padding:20,marginBottom:24}}>
+          <p style={{fontWeight:700,marginBottom:8}}>How it works:</p>
+          <p style={{color:"rgba(255,255,255,0.8)"}}>Answer {table}× questions as fast as possible. The clock is ticking!</p>
+        </div>
+        <button className="btn btn-primary" style={{width:"100%",fontSize:20,height:56,background:"#FECA57",color:"#1e3c5a"}} onClick={start}>
+          🚀 Start!
+        </button>
+      </div>
+    );
+  }
+  
+  return(
+    <div className="screen" style={{paddingTop:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div style={{background:"rgba(254,202,87,0.2)",border:"2px solid #FECA57",borderRadius:12,padding:"8px 20px",fontWeight:900,fontSize:24,color:"#FECA57"}}>{timeLeft}s</div>
+        <div style={{fontWeight:900,fontSize:24}}>⚡ {score}</div>
+      </div>
+      <div style={{marginBottom:8}}>
+        <div className="progress-bar-bg" style={{height:8}}>
+          <div className="progress-bar-fill" style={{width:`${(timeLeft/60)*100}%`,background:"#FECA57"}}/>
+        </div>
+      </div>
+      <div className="card" style={{padding:32,textAlign:"center",marginBottom:16,border:`3px solid ${feedback==="correct"?"#1DD1A1":feedback==="wrong"?"#FF6B6B":"#FECA57"}`,background:feedback==="correct"?"rgba(29,209,161,0.15)":feedback==="wrong"?"rgba(255,107,107,0.15)":"rgba(255,255,255,0.12)"}}>
+        <div style={{fontSize:48,fontWeight:900}}>{table} × {q?.factor} = ?</div>
+      </div>
+      <input ref={inputRef} type="number" value={userAns} onChange={e=>setUserAns(e.target.value)} onKeyDown={handleKey} placeholder="Answer..." style={{marginBottom:12,fontSize:28}}/>
+      <button className="btn" style={{width:"100%",fontSize:20,height:56,background:"#FECA57",color:"#1e3c5a",fontWeight:900}} disabled={!userAns} onClick={submit}>GO! ⚡</button>
+    </div>
+  );
+}
+
+function UnlockScreen({table,profile,isRankUp,newRank,onHome}){
+  const [icon,lname]=LANDMARKS[table].split(" ");
+  const desc=LANDMARK_DESCS[table];
+  const color=getTableColor(table);
+  return(
+    <div className="screen" style={{paddingTop:40,textAlign:"center",paddingBottom:40}}>
+      <div style={{fontSize:20,color:"rgba(255,255,255,0.7)",marginBottom:8}}>🎉 Landmark Unlocked!</div>
+      <div style={{fontSize:80,marginBottom:16,animation:"pop 0.5s ease forwards"}}>{icon}</div>
+      <h1 style={{fontSize:30,marginBottom:8,color:color}}>{LANDMARKS[table]}</h1>
+      <div className="card" style={{padding:20,marginBottom:20,borderLeft:`4px solid ${color}`}}>
+        <p style={{color:"rgba(255,255,255,0.9)",lineHeight:1.6,fontSize:15}}>{desc}</p>
+      </div>
+      {isRankUp&&(
+        <div className="card animate-pop" style={{padding:20,marginBottom:20,background:"rgba(254,202,87,0.2)",border:"3px solid #FECA57"}}>
+          <div style={{fontSize:40,marginBottom:8}}>{newRank.icon}</div>
+          <div style={{fontWeight:900,fontSize:22,color:"#FECA57"}}>Rank Up!</div>
+          <div style={{fontSize:18}}>{newRank.name} Explorer!</div>
+        </div>
+      )}
+      <div className="card" style={{padding:16,marginBottom:24,display:"flex",alignItems:"center",gap:12}}>
+        <span style={{fontSize:36}}>{profile.avatar}</span>
+        <div style={{textAlign:"left"}}>
+          <div style={{fontWeight:700}}>{profile.name}</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>
+            {TABLE_ORDER.filter(t=>profile.completed&&profile.completed[t]).length}/12 landmarks collected
+          </div>
+        </div>
+      </div>
+      <button className="btn btn-primary" style={{width:"100%",fontSize:18}} onClick={onHome}>
+        🌍 Back to World Map
+      </button>
+    </div>
+  );
+}
+
+function ProgressScreen({profile,onBack}){
+  const completed=TABLE_ORDER.filter(t=>profile.completed&&profile.completed[t]).length;
+  const rank=getRank(profile);
+  const weakFacts=Object.entries(profile.weakFacts||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  return(
+    <div className="screen" style={{paddingTop:16,paddingBottom:40}}>
+      <button onClick={onBack} className="btn btn-secondary" style={{padding:"8px 16px",fontSize:14,marginBottom:24}}>← Back</button>
+      <div style={{textAlign:"center",marginBottom:24}}>
+        <div style={{fontSize:56}}>{profile.avatar}</div>
+        <h2 style={{fontSize:24,marginBottom:4}}>{profile.name}</h2>
+        <div style={{fontSize:18}}>{rank.icon} {rank.name}</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+        <div className="card" style={{padding:16,textAlign:"center"}}><div style={{fontSize:36,fontWeight:900,color:"#FECA57"}}>{completed}</div><div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>Tables done</div></div>
+        <div className="card" style={{padding:16,textAlign:"center"}}><div style={{fontSize:36,fontWeight:900,color:"#1DD1A1"}}>{profile.speedBests?Math.max(0,...Object.values(profile.speedBests)):0}</div><div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>Best speed score</div></div>
+      </div>
+      <div className="card" style={{padding:16,marginBottom:16}}>
+        <h3 style={{marginBottom:12}}>Table Progress</h3>
+        {TABLE_ORDER.map(t=>{
+          const done=profile.completed&&profile.completed[t];
+          const speed=profile.speedBests&&profile.speedBests[t];
+          return(
+            <div key={t} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                <span style={{fontWeight:700}}>{t}× table</span>
+                <span style={{color:done?"#1DD1A1":"rgba(255,255,255,0.5)"}}>{done?"✓ Complete"+(speed?` ⚡${speed}`:""):"Not done"}</span>
+              </div>
+              <div className="progress-bar-bg" style={{height:8}}>
+                <div className="progress-bar-fill" style={{width:done?"100%":"0%",background:getTableColor(t)}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {weakFacts.length>0&&(
+        <div className="card" style={{padding:16}}>
+          <h3 style={{marginBottom:12}}>⚠️ Practice These</h3>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            {weakFacts.map(([key,count])=>{
+              const [t,f]=key.replace("x"," ").split(" ").map(Number);
+              return(
+                <div key={key} style={{background:"rgba(255,107,107,0.15)",border:"1px solid rgba(255,107,107,0.4)",borderRadius:10,padding:"8px 12px"}}>
+                  <div style={{fontWeight:700}}>{t} × {f} = {t*f}</div>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,0.6)"}}>Missed {count}×</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HallOfFame({onBack}){
+  const profiles=loadProfiles();
+  const allScores=[];
+  TABLE_ORDER.forEach(t=>{
+    let best=null;
+    profiles.forEach(p=>{
+      const s=p.speedBests&&p.speedBests[t];
+      if(s&&(!best||s>best.score))best={score:s,name:p.name,avatar:p.avatar,table:t};
+    });
+    if(best)allScores.push(best);
+  });
+  
+  const allTimeChamp=profiles.length>0?profiles.reduce((best,p)=>{
+    const maxScore=p.speedBests?Math.max(0,...Object.values(p.speedBests)):0;
+    return(!best||maxScore>best.score)?{...p,score:maxScore}:best;
+  },null):null;
+  
+  return(
+    <div className="screen" style={{paddingTop:16,paddingBottom:40}}>
+      <button onClick={onBack} className="btn btn-secondary" style={{padding:"8px 16px",fontSize:14,marginBottom:24}}>← Back</button>
+      <h1 style={{fontSize:28,textAlign:"center",marginBottom:4}}>⚡ Hall of Fame</h1>
+      <p style={{textAlign:"center",color:"rgba(255,255,255,0.7)",marginBottom:24}}>Speed Round Champions</p>
+      
+      {allTimeChamp&&allTimeChamp.score>0&&(
+        <div className="card animate-pop" style={{padding:20,marginBottom:20,background:"rgba(254,202,87,0.15)",border:"3px solid #FECA57",textAlign:"center"}}>
+          <div style={{fontSize:13,color:"#FECA57",fontWeight:700,marginBottom:8}}>🏆 ALL-TIME CHAMPION</div>
+          <div style={{fontSize:48}}>{allTimeChamp.avatar}</div>
+          <div style={{fontSize:22,fontWeight:900}}>{allTimeChamp.name}</div>
+          <div style={{fontSize:36,fontWeight:900,color:"#FECA57"}}>{allTimeChamp.score} pts</div>
+        </div>
+      )}
+      
+      {allScores.length===0?(
+        <div className="card" style={{padding:24,textAlign:"center"}}>
+          <p style={{color:"rgba(255,255,255,0.7)"}}>No speed scores yet! Complete a table to play the speed round.</p>
+        </div>
+      ):(
+        <div className="card" style={{padding:16}}>
+          <h3 style={{marginBottom:12}}>Per Table Records</h3>
+          {allScores.map(({table,score,name,avatar})=>(
+            <div key={table} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,0.1)"}}>
+              <div style={{width:36,height:36,borderRadius:"50%",background:getTableColor(table),display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:14,color:"#1e3c5a"}}>{table}×</div>
+              <span style={{fontSize:24}}>{avatar}</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700}}>{name}</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.6)"}}>{LANDMARKS[table]}</div>
+              </div>
+              <div style={{fontWeight:900,fontSize:20,color:"#FECA57"}}>⚡{score}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminDashboard({onBack}){
+  const profiles=loadProfiles();
+  const analytics=loadAnalytics();
+  const tableCompletions={};
+  TABLE_ORDER.forEach(t=>{
+    tableCompletions[t]=profiles.filter(p=>p.completed&&p.completed[t]).length;
+  });
+  const maxComp=Math.max(1,...Object.values(tableCompletions));
+  const minComp=Math.min(...Object.values(tableCompletions));
+  const mostDone=TABLE_ORDER.find(t=>tableCompletions[t]===maxComp);
+  const leastDone=TABLE_ORDER.find(t=>tableCompletions[t]===minComp);
+  const avgCompleted=profiles.length?Math.round(profiles.reduce((s,p)=>s+TABLE_ORDER.filter(t=>p.completed&&p.completed[t]).length,0)/profiles.length*10)/10:0;
+  
+  return(
+    <div className="screen" style={{paddingTop:16,paddingBottom:40}}>
+      <button onClick={onBack} className="btn btn-secondary" style={{padding:"8px 16px",fontSize:14,marginBottom:24}}>← Back</button>
+      <h1 style={{fontSize:26,textAlign:"center",marginBottom:4}}>📊 Admin Dashboard</h1>
+      <p style={{textAlign:"center",color:"rgba(255,255,255,0.7)",marginBottom:24}}>Class overview</p>
+      
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:20}}>
+        <div className="card" style={{padding:14,textAlign:"center"}}><div style={{fontSize:28,fontWeight:900,color:"#48DBFB"}}>{profiles.length}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Players</div></div>
+        <div className="card" style={{padding:14,textAlign:"center"}}><div style={{fontSize:28,fontWeight:900,color:"#1DD1A1"}}>{analytics.totalSessions||0}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Sessions</div></div>
+        <div className="card" style={{padding:14,textAlign:"center"}}><div style={{fontSize:28,fontWeight:900,color:"#FECA57"}}>{avgCompleted}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>Avg tables</div></div>
+      </div>
+      
+      <div className="card" style={{padding:16,marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:12}}>
+          <span style={{color:"#1DD1A1",fontWeight:700}}>Most done: {mostDone?`${mostDone}× table`:"-"}</span>
+          <span style={{color:"#FF6B6B",fontWeight:700}}>Least: {leastDone?`${leastDone}× table`:"-"}</span>
+        </div>
+        <h3 style={{marginBottom:12}}>Table Completion Rates</h3>
+        {TABLE_ORDER.map(t=>{
+          const count=tableCompletions[t];
+          const pct=profiles.length?Math.round((count/profiles.length)*100):0;
+          return(
+            <div key={t} style={{marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
+                <span style={{fontWeight:700}}>{t}× table</span>
+                <span>{count}/{profiles.length} ({pct}%)</span>
+              </div>
+              <div className="progress-bar-bg" style={{height:8}}>
+                <div className="progress-bar-fill" style={{width:`${pct}%`,background:getTableColor(t)}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      <div className="card" style={{padding:16}}>
+        <h3 style={{marginBottom:12}}>All Players</h3>
+        {profiles.length===0&&<p style={{color:"rgba(255,255,255,0.5)"}}>No players yet.</p>}
+        {profiles.map(p=>{
+          const rank=getRank(p);
+          const done=TABLE_ORDER.filter(t=>p.completed&&p.completed[t]).length;
+          const maxSpeed=p.speedBests?Math.max(0,...Object.values(p.speedBests)):0;
+          return(
+            <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,0.1)"}}>
+              <span style={{fontSize:28}}>{p.avatar}</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:15}}>{p.name}</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,0.6)"}}>{rank.icon} {rank.name} · {done}/12 · ⚡{maxSpeed}</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>Last: {new Date(p.lastActive).toLocaleDateString()}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+function App(){
+  const [screen,setScreen]=useState("profileSelect");
+  const [profile,setProfile]=useState(null);
+  const [activeTable,setActiveTable]=useState(null);
+  const [unlockInfo,setUnlockInfo]=useState(null);
+  
+  function selectProfile(p){
+    const a=loadAnalytics();
+    a.totalSessions=(a.totalSessions||0)+1;
+    saveAnalytics(a);
+    p.lastActive=Date.now();
+    updateProfileInStorage(p);
+    setProfile(p);setScreen("home");
+  }
+  
+  function updateProfileInStorage(p){
+    const profiles=loadProfiles();
+    const idx=profiles.findIndex(x=>x.id===p.id);
+    if(idx>=0){profiles[idx]=p;saveProfiles(profiles);}
+    setProfile({...p});
+  }
+  
+  function handleTableComplete(table,speedScore){
+    const oldRank=getRank(profile);
+    const updated={...profile};
+    updated.completed=updated.completed||{};
+    updated.completed[table]=true;
+    updated.speedBests=updated.speedBests||{};
+    if(speedScore>=(updated.speedBests[table]||0)){updated.speedBests[table]=speedScore;}
+    updated.lastActive=Date.now();
+    updateProfileInStorage(updated);
+    
+    // Analytics
+    const a=loadAnalytics();
+    a.tableCompletions=a.tableCompletions||{};
+    a.tableCompletions[table]=(a.tableCompletions[table]||0)+1;
+    a.speedScores=a.speedScores||{};
+    if(!a.speedScores[table]||speedScore>a.speedScores[table])a.speedScores[table]=speedScore;
+    saveAnalytics(a);
+    
+    const newRank=getRank(updated);
+    const rankUp=newRank.name!==oldRank.name;
+    setUnlockInfo({table,isRankUp:rankUp,newRank});
+    setScreen("unlock");
+  }
+  
+  if(screen==="profileSelect")return<ProfileSelect onSelect={selectProfile} onNew={()=>setScreen("newProfile")} onAdmin={()=>setScreen("admin")}/>;
+  if(screen==="newProfile")return<NewProfile onSave={selectProfile} onBack={()=>setScreen("profileSelect")}/>;
+  if(screen==="admin")return<AdminDashboard onBack={()=>setScreen("profileSelect")}/>;
+  if(!profile)return null;
+  if(screen==="home")return<HomeScreen profile={profile} onTable={t=>{setActiveTable(t);setScreen("table");}} onProgress={()=>setScreen("progress")} onHallOfFame={()=>setScreen("hallOfFame")} onSwitchProfile={()=>setScreen("profileSelect")} onUpdateProfile={updateProfileInStorage}/>;
+  if(screen==="table"&&activeTable)return<TableScreen table={activeTable} profile={profile} onComplete={handleTableComplete} onBack={()=>setScreen("home")} onUpdateProfile={updateProfileInStorage}/>;
+  if(screen==="unlock"&&unlockInfo)return<UnlockScreen table={unlockInfo.table} profile={profile} isRankUp={unlockInfo.isRankUp} newRank={unlockInfo.newRank} onHome={()=>setScreen("home")}/>;
+  if(screen==="progress")return<ProgressScreen profile={profile} onBack={()=>setScreen("home")}/>;
+  if(screen==="hallOfFame")return<HallOfFame onBack={()=>setScreen("home")}/>;
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
